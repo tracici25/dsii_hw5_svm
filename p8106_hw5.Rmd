@@ -1,0 +1,85 @@
+---
+title: "p8106_hw5"
+author: "Mufeng Xu"
+date: "4/29/2021"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(mlbench)
+library(ISLR)
+library(caret)
+library(e1071)
+library(kernlab)
+```
+
+# Part A: Linear Kernel
+
+## set up training and testing data
+
+```{r}
+data("OJ")
+oj = OJ %>% janitor::clean_names()
+set.seed(1)
+rowTrain = createDataPartition(y = oj$purchase,
+                               p = 799/1070,
+                               list = FALSE)
+train = oj[rowTrain, ]
+test = oj[-rowTrain, ]
+```
+
+
+```{r}
+ctrl = trainControl(method = "cv")
+
+set.seed(1)
+svml_fit = train(purchase ~ .,
+                 data = train,
+                 method = "svmLinear2",
+                 preProcess = c("center", "scale"),
+                 tuneGrid = data.frame(cost = exp(seq(-5,-1,len = 50))),
+                 trControl = ctrl)
+plot(svml_fit, hightlight = TRUE, xTrans = log)
+
+svml_fit$finalModel
+svml_fit$bestTune
+
+pred_train = predict(svml_fit)
+pred_test = predict(svml_fit, newdata = test, type = "raw")
+mean(train$purchase != pred_train)
+mean(test$purchase != pred_test)
+```
+
+Linear Kernel training error rate: `r mean(train$purchase != pred_train)`
+
+Linear Kernel testing error rate: `r mean(test$purchase != pred_test)`
+
+
+# Part B: Radial Kernel
+
+```{r}
+svmr_grid = expand.grid(C = exp(seq(-5,4,len = 15)),
+                        sigma = exp(seq(-5,0,len = 10)))
+
+set.seed(1)
+svmr_fit <- train(purchase ~ .,
+                  data = train,
+                  method = "svmRadial",
+                  preProcess = c("center", "scale"),
+                  tuneGrid = svmr_grid,
+                  trControl = ctrl)
+plot(svmr_fit, hightlight = TRUE)
+
+svmr_fit$finalModel
+svmr_fit$bestTune
+pred_train_2 = predict(svmr_fit)
+pred_test_2 = predict(svmr_fit, newdata = test, type = "raw")
+mean(train$purchase != pred_train_2)
+mean(test$purchase != pred_test_2)
+```
+
+Radial Kernel training error rate: `r mean(train$purchase != pred_train_2)`
+
+Radial Kernel testing error rate: `r mean(test$purchase != pred_test_2)`
+
